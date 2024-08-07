@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Tracker WEB APP</title>
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        .delete-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 24px;
+            height: 35px;
+            margin-left: 22%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <img id="logo" src="logo.avif" alt="logo">
+        <h1>New Janseva Saree Center</h1>
+
+    </div>
+    <div class="header2">
+        <h2 id="purp_head">Transaction Management System</h2>
+    </div>
+    
+
+    <form id="money-form" action="/submit" method="POST">
+        <label for="#"><b>Category : </b></label>
+        <select name="category" id="category_list">
+            <option value="saree">Saree</option>
+            <option value="kurti">Kurtis</option>
+            <option value="Dress">Dress</option>
+            <option value="Shirt">Shirt</option>
+            <option value="Pant">Pant</option>
+            <option value="Innerwear">Innerwear</option>
+        </select>
+
+        <label for="#" class="common"><b>Amount : </b></label>
+        <input type="number" name="amount" placeholder="In RUPEES" id="amt">
+
+        <label for="#" class="common"><b>Payment Mode : </b></label>
+        <select name="mode" id="mode_list">
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="cre">Credit Card</option>
+        </select>
+        <label for="#" class="common"><b>Date : </b></label>
+        <input type="date" name="date" id="dt">
+
+        <button type="submit" id="add_btn" onclick="fetchDataAndDisplay();">Add</button>
+    </form>
+
+    <div class="container">
+        <h2 style="text-align: center;color:orangered; font-size:35px; margin-top: 7%; margin-bottom: 2%;">Transactions List</h2>
+
+        <table id="data-table" class="common2">
+            <thead id="thead-bd">
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Payment Mode</th>
+                <th>Date</th>
+                <th>Delete</th>
+            </thead>
+            <tbody id="data-body">
+            </tbody>
+            <tfoot id="tfoot-bd">
+                <tr>
+                    <td colspan="1">Total</td>
+                    <td colspan="4" id="total" style="text-align:center; font-weight:bold;">0</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <script>
+        async function fetchDataAndDisplay() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+                const tableBody = document.getElementById('data-body');
+                let totalAmount = 0;
+                tableBody.innerHTML = '';
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                <td>${item.category}</td>
+                <td>${item.amount}</td>
+                <td>${item.mode}</td>
+                <td>${new Date(item.date).toLocaleDateString()}</td>
+                <td><button class="delete-button" data-id="${item._id}">Delete</button></td>
+            `;
+                    tableBody.appendChild(row);
+
+                    totalAmount += item.amount;
+                });
+
+                document.getElementById('total').textContent = totalAmount;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        async function updateTotal(amount) {
+            try {
+                const totalElement = document.getElementById('total');
+                let currentTotal = parseInt(totalElement.textContent);
+                currentTotal += amount;
+                totalElement.textContent = currentTotal;
+            } catch (error) {
+                console.error('Error updating total:', error);
+            }
+        }
+        async function deleteEntry(id) {
+            try {
+                const response = await fetch(`/delete/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                console.log(data.message); // Log success message
+                await fetchDataAndDisplay(); // Refresh table after 
+                updateTotal(-amount);
+            } catch (error) {
+                console.error('Error deleting entry:', error);
+            }
+        }
+
+        async function addEntry(event) {
+            event.preventDefault(); // Prevent form submission
+
+            const category = document.getElementById('category_list').value;
+            const amount = document.getElementById('amt').value;
+            const mode = document.getElementById('mode_list').value;
+            const date = document.getElementById('dt').value;
+
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ category, amount, mode, date })
+                });
+                const data = await response.json();
+                console.log(data.message);
+                await fetchDataAndDisplay();
+            } catch (error) {
+                console.error('Error adding entry:', error);
+            }
+        }
+        document.addEventListener('click', async function (event) {
+            if (event.target.classList.contains('delete-button')) {
+                const id = event.target.dataset.id; // Get the ID of the entry from the button's dataset
+                // Delete row from the table
+                event.target.closest('tr').remove();
+                await deleteEntry(id); // Call the deleteEntry function with the ID
+            }
+        });
+        // Fetch data and display on page load
+        // window.onload = fetchDataAndDisplay;
+
+        // Event listener for form submission
+        document.getElementById('money-form').addEventListener('submit', addEntry);
+    </script>
+</body>
+
+</html>
